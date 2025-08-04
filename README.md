@@ -56,3 +56,35 @@ The project's workflow is implemented in Julia, leveraging specialized packages 
 
 5.  **Visualization:**
     * Visualize results, including tracked cloud movements within the Alpine Region, using `Makie.jl` and `GeoMakie.jl`. These packages provide robust tools for scientific data visualization, including geographic projections, for clear and interactive presentation.
+
+---
+
+### Current Status: Data Loading and Initial Visualization
+
+Currently, the data ingestion pipeline is robust. We can successfully load the NetCDF radar files, extract the `ACRR` (precipitation) and `QUALITY` data, and correctly interpret their associated Coordinate Reference System (CRS). The `Rasters.jl` framework is used to manage this geospatial data effectively.
+
+A notable aspect of the data loading process is the necessity for a custom function (`load_netcdf_radar_data`) rather than directly using `Rasters.jl`'s built-in file loading. This complex, manual approach for extracting data and constructing the `RasterStack` is crucial because the **CRS (Coordinate Reference System) information is not consistently or explicitly stored in a format directly parseable by `Rasters.jl`'s default NetCDF readers for this specific dataset**. The `grid_mapping` variable and its attributes, which contain the Polar Stereographic projection parameters, must be manually read from the NetCDF file and assembled into a PROJ string. This ensures that the `Rasters.jl` objects (`Raster` and `RasterStack`) are instantiated with the correct spatial context, which is fundamental for accurate re-projection and analysis.
+
+An example of a loaded `RasterStack`, `local_data_stack`, shows its dimensions, layers, and CRS information:
+
+```julia
+julia> local_data_stack
+┌ 1536×1536×1 RasterStack ┐
+├─────────────────────────┴─────────────────────────────────────────────────────────── dims ┐
+  ↓ Y Projected{Int32} [-500, …, -1535500] ReverseOrdered Irregular Points,
+  → X Projected{Int32} [500, …, 1535500] ForwardOrdered Irregular Points,
+  ↗ Ti Sampled{DateTime} [DateTime("2025-06-02T18:25:00")] ForwardOrdered Irregular Points
+├─────────────────────────────────────────────────────────────────────────────────── layers ┤
+  :ACRR    eltype: Union{Missing, Int32} dims: Y, X, Ti size: 1536×1536×1
+  :QUALITY eltype: Union{Missing, Int32} dims: Y, X, Ti size: 1536×1536×1
+├─────────────────────────────────────────────────────────────────────────────────── raster ┤
+  missingval: missing
+  extent: Extent(Y = (-1535500, -500), X = (500, 1535500), Ti = (DateTime("2025-06-02T18:25:00"), DateTime("2025-06-02T18:25:00")))
+  crs: +proj=stere +lat_0=90.0 +lon_0=0.0 +lat_ts=45.0 +x_0=619652.074055906 +y_0=3.5268...
+└───────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+All the underlying components, including CRS parsing, data extraction, and raster object creation, are functioning as expected. However, the immediate challenge lies in the visualization phase: when attempting to plot the data, the geographical map and its features appear correctly, but the actual radar precipitation data itself does not render. This suggests that while the data is loaded and its CRS is understood, there might still be an issue with the data values, their range, or the final re-projection step that prevents them from being rendered as a visible heatmap layer on the map. Resolving this data rendering issue is now the primary focus and the next critical step for the project.
+
+![Plot of example data](example_plot.png))
+
